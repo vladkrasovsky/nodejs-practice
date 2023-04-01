@@ -1,11 +1,12 @@
 const asyncHandler = require("express-async-handler");
-
+const { engine } = require("express-handlebars");
 const express = require("express");
 const path = require("path");
 const dotenv = require("dotenv");
 const connectDb = require("../config/db");
 const configPath = path.join(__dirname, "..", "config", ".env");
 dotenv.config({ path: configPath });
+const sendEmail = require("./services/sendEmail");
 
 const RolesModel = require("./model/rolesModel");
 const UsersModel = require("./model/usersModel");
@@ -21,6 +22,13 @@ const generateToken = (data) => {
 require("colors");
 
 const app = express();
+
+app.use(express.static("public"));
+
+// set template engine
+app.engine("handlebars", engine());
+app.set("view engine", "handlebars");
+app.set("views", "backend/views");
 
 app.use(express.urlencoded({ extended: false }));
 
@@ -135,6 +143,33 @@ app.get(
     });
   })
 );
+
+app.get("/", (req, res) => {
+  res.render("home");
+});
+app.get("/about", (req, res) => {
+  res.render("about");
+});
+app.get("/contact", (req, res) => {
+  res.render("contact");
+});
+
+app.post("/send", async (req, res) => {
+  // res.send(req.body);
+  try {
+    res.render("send", {
+      message: "Contact send sucess",
+      user: req.body.userName,
+      email: req.body.userEmail,
+    });
+
+    await sendEmail(req.body);
+  } catch (error) {
+    res.status(400).json({
+      message: error.message,
+    });
+  }
+});
 
 app.use("*", (req, res, next) => {
   res.status(404).json({ code: 404, message: "Not found" });
